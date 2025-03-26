@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Potts Model Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .controls {
+            margin: 10px;
+        }
+        input {
+            margin: 0 5px;
+            padding: 5px;
+            width: 80px;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Interactive Potts Model Simulator</h2>
+
+<div class="controls">
+    Lattice Size (L): <input type="number" id="size" value="100">
+    Number of States (Q): <input type="number" id="states" value="5">
+    Temperature (T): <input type="number" id="temperature" value="1" step="0.1">
+    Monte Carlo Steps: <input type="number" id="steps" value="1000">
+</div>
+
+<div class="controls">
+    <button onclick="startSimulation()">Start</button>
+    <button onclick="pauseSimulation()">Pause</button>
+    <button onclick="resetSimulation()">Reset</button>
+</div>
+
+<canvas id="latticeCanvas" width="500" height="500"></canvas>
+
+<script>
+
+let L, Q, T, steps;
+let lattice;
+let running = false;
+let currentStep = 0;
+let interval;
+
+function initializeLattice() {
+    lattice = [];
+    for (let i = 0; i < L; i++) {
+        lattice[i] = [];
+        for (let j = 0; j < L; j++) {
+            lattice[i][j] = Math.floor(Math.random() * Q);
+        }
+    }
+}
+
+function drawLattice() {
+    const canvas = document.getElementById('latticeCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = canvas.width / L;
+
+    for (let i = 0; i < L; i++) {
+        for (let j = 0; j < L; j++) {
+            ctx.fillStyle = `hsl(${(lattice[i][j] * 360 / Q)}, 80%, 60%)`;
+            ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+        }
+    }
+}
+
+function monteCarloStep() {
+    for (let n = 0; n < L * L; n++) {
+        let i = Math.floor(Math.random() * L);
+        let j = Math.floor(Math.random() * L);
+        let newState = Math.floor(Math.random() * Q);
+        let dE = 0;
+
+        let neighbors = [[-1,0],[1,0],[0,-1],[0,1]];
+        neighbors.forEach(([dx, dy]) => {
+            let ni = (i + dx + L) % L;
+            let nj = (j + dy + L) % L;
+            dE += (newState === lattice[ni][nj] ? -1 : 1) - (lattice[i][j] === lattice[ni][nj] ? -1 : 1);
+        });
+
+        if (dE <= 0 || Math.random() < Math.exp(-dE / T)) {
+            lattice[i][j] = newState;
+        }
+    }
+    drawLattice();
+}
+
+function startSimulation() {
+    if (running) return;
+    L = parseInt(document.getElementById('size').value);
+    Q = parseInt(document.getElementById('states').value);
+    T = parseFloat(document.getElementById('temperature').value);
+    steps = parseInt(document.getElementById('steps').value);
+
+    if (!lattice || currentStep === 0) initializeLattice();
+
+    running = true;
+    interval = setInterval(() => {
+        if (currentStep < steps) {
+            monteCarloStep();
+            currentStep++;
+        } else {
+            pauseSimulation();
+        }
+    }, 50);
+}
+
+function pauseSimulation() {
+    running = false;
+    clearInterval(interval);
+}
+
+function resetSimulation() {
+    pauseSimulation();
+    currentStep = 0;
+    initializeLattice();
+    drawLattice();
+}
+
+// Initial draw
+initializeLattice();
+drawLattice();
+
+</script>
+
+</body>
+</html>
